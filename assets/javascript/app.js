@@ -30,6 +30,7 @@ $("#submit-button").on("click", function (event) {
 })
 
 database.ref().on("child_added", function(data){
+    // console.log(data)
 
     // Retrieved from train-example.html
     var firstTrainMoment = moment(data.val().firstTrainTime, "HH:mm").subtract(1, "years");
@@ -39,6 +40,7 @@ database.ref().on("child_added", function(data){
 
     // Adds all values as a table row on page
     var tableRow = $("<tr>");
+    tableRow.append($("<button>").addClass("btn btn-outline-primary delete").attr("data-key", data.key).text("X"));
     tableRow.append( $("<td>").text(data.val().trainName));
     tableRow.append( $("<td>").text(data.val().destination));
     tableRow.append( $("<td>").text(data.val().frequency));
@@ -46,4 +48,10 @@ database.ref().on("child_added", function(data){
     tableRow.append( $("<td>").text(minutesAway));
 
     $("#table-body").append(tableRow);
+})
+
+// Deletes row from table and data from firebase
+$("#table-body").on("click", ".delete", function(){
+    $(this).parent().empty();
+    database.ref().child($(this).attr("data-key")).remove();
 })
