@@ -1,4 +1,12 @@
-// Your web app's Firebase configuration
+/**
+ * @author Caren Briones <carenpbriones@gmail.com>
+ * Train Scheduler functionalities
+ * - User can add a train's schedule, which will persist to a firebase database and be displayed in a table
+ * - User can update a train's schedule, which will persist to the database
+ * - User can delete a train's schedule, which will delete it in the database
+ * 
+ * September 13, 2019
+ */
 var firebaseConfig = {
     apiKey: "AIzaSyAEbxh1sjsSiKcznLmvpQWl-CxXXVRkaBc",
     authDomain: "cb-cdc-activities123.firebaseapp.com",
@@ -13,12 +21,9 @@ firebase.initializeApp(firebaseConfig);
 
 var database = firebase.database();
 
+// Submits user's input as a train in the table
 $("#submit-button").on("click", function (event) {
     event.preventDefault();
-    console.log($("#train-name").val().trim());
-    console.log($("#destination").val().trim());
-    console.log($("#first-train-time").val().trim());
-    console.log($("#frequency").val().trim());
 
     // Push values to database
     database.ref().push({
@@ -39,13 +44,13 @@ database.ref().on("child_added", function(data){
     var minutesAway = data.val().frequency - tRemainder;
 
     // Adds all values as a table row on page
-    var tableRow = $("<tr>");
+    var tableRow = $("<tr>").attr("data-key", data.key);
     tableRow.append($("<button>").addClass("btn btn-outline-primary delete").attr("data-key", data.key).text("X"));
-    tableRow.append( $("<td>").text(data.val().trainName));
-    tableRow.append( $("<td>").text(data.val().destination));
-    tableRow.append( $("<td>").text(data.val().frequency));
-    tableRow.append( $("<td>").text(moment().add(minutesAway, "minutes").format("HH:mm A")));
-    tableRow.append( $("<td>").text(minutesAway));
+    tableRow.append( $("<td>").html("<span class='train-info' data-key='trainName'>" + data.val().trainName + "</span>"));
+    tableRow.append( $("<td>").html("<span class='train-info' data-key='destination'>" + (data.val().destination + "</span>")));
+    tableRow.append( $("<td>").html("<span class='train-info' data-key='frequency'>" + data.val().frequency + "</span>"));
+    tableRow.append( $("<td>").html("<span>" + moment().add(minutesAway, "minutes").format("HH:mm A") + "</span>"));
+    tableRow.append( $("<td>").html("<span>" + minutesAway));
 
     $("#table-body").append(tableRow);
 })
@@ -54,4 +59,40 @@ database.ref().on("child_added", function(data){
 $("#table-body").on("click", ".delete", function(){
     $(this).parent().empty();
     database.ref().child($(this).attr("data-key")).remove();
+})
+
+// Allows user to change value of train info
+$("#table-body").on("click", ".train-info", function(){
+    // Temporarily removes train-info class while user inputs a value
+    $(this).removeClass("train-info");
+
+    // Replaces info with input box to update data
+    var inputUpdate = $("<input>").attr({
+        type: "text",
+        id: "update-value",
+        class: "form-control"
+    })
+    $(this).html(inputUpdate);
+
+    // Adds update button for user to update td
+    $(this).append($("<button>").addClass("update btn btn-outline-primary").text("Update"));
+})
+
+// Updates value in database and current user's table (other users will not see until refresh)
+$("#table-body").on("click", ".update", function(){
+    // Determines which key value pair needs to be updated
+    var updateKey = $(this).parent().attr("data-key");
+    var trainKey = $(this).parent().parent().parent().attr("data-key");
+    var updateTrain = database.ref().child(trainKey);
+    var updateValue = $(this).prev().val();
+
+    // Updates value, adds train-info class to allow user to update value again if they want
+    $(this).parent().html(updateValue).addClass("train-info")
+    if (updateKey === "trainName"){
+        updateTrain.update({trainName: updateValue});
+    } else if (updateKey == "destination"){
+        updateTrain.update({destination: updateValue});
+    } else { // frequency; has to update next train and time until arrival
+        updateTrain.update({frequency: updateValue});
+    }
 })
